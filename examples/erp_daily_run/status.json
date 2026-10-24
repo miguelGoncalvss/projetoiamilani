@@ -1,0 +1,5 @@
+{
+  "status": "completed",
+  "selected_model": "prophet",
+  "note": "Teste final avalia o modelo ajustado até a origem do teste; model/ contém o refit posterior."
+}

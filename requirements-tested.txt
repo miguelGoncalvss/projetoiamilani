@@ -1,0 +1,9 @@
+# Dependências diretas nas versões verificadas em Python 3.12/Linux.
+# Uso opcional: python -m pip install -r requirements-tested.txt
+# Depois: python -m pip install --no-deps -e .
+numpy==2.3.5
+pandas==2.2.3
+scikit-learn==1.8.0
+xgboost==3.4.1
+prophet==1.4.0
+pytest==9.1.1

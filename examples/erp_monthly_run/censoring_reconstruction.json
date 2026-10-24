@@ -1,0 +1,7 @@
+{
+  "stockout_rows": 300,
+  "reconstructed_rows": 300,
+  "recovered_units": 4914.69,
+  "observed_total_outbound": 1326374.0,
+  "reconstructed_total_demand": 1331288.69
+}

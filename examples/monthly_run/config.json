@@ -1,0 +1,14 @@
+{
+  "frequency": "monthly",
+  "models": [
+    "naive",
+    "seasonal",
+    "xgboost",
+    "prophet"
+  ],
+  "selection_folds": 2,
+  "calibration_folds": 2,
+  "minimum_calibration_samples": 20,
+  "seed": 42,
+  "xgb_estimators": 100
+}

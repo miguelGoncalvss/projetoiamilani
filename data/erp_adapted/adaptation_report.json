@@ -1,0 +1,13 @@
+{
+  "raw_movement_rows": 55707,
+  "cleaned_sku_whitespace_rows": 930,
+  "separated_client_returns_rows": 834,
+  "separated_client_returns_units": 2170.0,
+  "separated_inventory_adjustments_rows": 495,
+  "separated_inventory_adjustments_net_units": -990.0,
+  "adapted_daily_panel_rows": 43830,
+  "sku_count": 15,
+  "start_date": "2018-01-01",
+  "end_date": "2025-12-31",
+  "stockout_days_flagged": 300
+}

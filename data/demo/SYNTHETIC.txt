@@ -1,0 +1,1 @@
+DADOS FICTÍCIOS. Saídas são Poisson com sazonalidade e tendência. Entradas históricas iguais às saídas: estoque não limita o atendimento. Recebimentos futuros são hipóteses independentes de previsão. Não usar métricas desta base como evidência de desempenho real.

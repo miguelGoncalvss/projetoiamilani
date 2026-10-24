@@ -1,0 +1,26 @@
+{
+  "project_version": "0.1.0",
+  "created_utc": "2026-09-16T00:09:39.266266+00:00",
+  "input_sha256": "484ec98e61e67b3d78433fc434c21954119f51e809628a7c6011a472d996bc47",
+  "input_rows": 29220,
+  "sku_count": 10,
+  "start_date": "2018-01-01",
+  "end_date": "2025-12-31",
+  "target": "observed_outbound",
+  "synthetic": true,
+  "stockout_rows": 0,
+  "versions": {
+    "numpy": "2.3.5",
+    "pandas": "2.2.3",
+    "scikit-learn": "1.8.0",
+    "xgboost": "3.4.1",
+    "prophet": "1.4.0"
+  },
+  "selection_rule": "mean MAE, equal weights per SKU; selection folds only",
+  "interval_method": "absolute scaled errors, by horizon, separate calibration folds",
+  "limitations": [
+    "Saídas observadas não recuperam demanda perdida.",
+    "Bandas empíricas não garantem cobertura.",
+    "Nenhuma prova de acurácia real em dados sintéticos."
+  ]
+}

@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "estoque-ia"
+version = "0.1.0"
+description = "Previsão temporal de saídas e simulação de estoque para um CD"
+requires-python = ">=3.11"
+dependencies = [
+  "numpy>=1.26,<3", "pandas>=2.2,<3", "scikit-learn>=1.4,<2",
+  "xgboost>=2.1,<4", "prophet>=1.1.6,<2"
+]
+[project.optional-dependencies]
+dev = ["pytest>=8,<10"]
+[project.scripts]
+estoque-ia = "estoque_ia.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

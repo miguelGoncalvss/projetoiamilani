@@ -1,0 +1,29 @@
+{
+  "name": "prophet",
+  "config": {
+    "frequency": "monthly",
+    "models": [
+      "naive",
+      "seasonal",
+      "xgboost",
+      "prophet"
+    ],
+    "selection_folds": 2,
+    "calibration_folds": 2,
+    "minimum_calibration_samples": 20,
+    "seed": 42,
+    "xgb_estimators": 100
+  },
+  "skus": [
+    "SKU_001",
+    "SKU_002",
+    "SKU_003",
+    "SKU_004",
+    "SKU_005",
+    "SKU_006",
+    "SKU_007",
+    "SKU_008",
+    "SKU_009",
+    "SKU_010"
+  ]
+}

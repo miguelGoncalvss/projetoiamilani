@@ -1,0 +1,4 @@
+region,capacity_m3,max_pallet_positions,max_floor_weight_kg,max_rack_height_m,allowed_classes
+R_SECO,420.0,320,195000.0,2.2,SECO|EMBALAGEM
+R_REFRIG,260.0,190,115000.0,1.9,REFRIGERADO
+R_QUIMICO,190.0,140,98000.0,1.8,QUIMICO

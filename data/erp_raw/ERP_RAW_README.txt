@@ -1,0 +1,1 @@
+DADOS BRUTOS SIMULADOS DE ERP. Contém múltiplas transações por dia, espaços em SKUs, devoluções de clientes, ajustes de inventário e eventos de ruptura. Use o comando adapt-erp para converter ao contrato validado.

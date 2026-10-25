@@ -1,4 +1,4 @@
-"""Baselines, XGBoost direto global e Prophet por SKU; artefatos JSON sem pickle."""
+"""Baselines, XGBoost direto global normalizado por escala/tendência e Prophet por SKU; artefatos JSON sem pickle."""
 import json
 from pathlib import Path
 import numpy as np
@@ -11,6 +11,7 @@ class Forecaster:
     def __init__(self, name, cfg):
         self.name, self.cfg = name, cfg
         self.models = {}
+        self.target_scaled = True
 
     def fit(self, panel):
         self.panel = panel.sort_values(["sku", "ds"]).copy()
@@ -18,14 +19,16 @@ class Forecaster:
         if self.name == "xgboost":
             from xgboost import XGBRegressor
             x, y, _ = training_rows(self.panel, self.cfg)
-            x = self._encode(x)
-            self.columns = x.columns.tolist()
+            local_scale = x["local_scale"].to_numpy(dtype=float)
+            x_enc = self._encode(x)
+            self.columns = x_enc.columns.tolist()
+            self.target_scaled = True
             self.regressor = XGBRegressor(
                 objective="reg:squarederror", n_estimators=self.cfg.xgb_estimators,
                 max_depth=3, learning_rate=0.05, min_child_weight=5,
                 subsample=1.0, colsample_bytree=1.0, n_jobs=2,
                 random_state=self.cfg.seed, tree_method="hist")
-            self.regressor.fit(x, y)
+            self.regressor.fit(x_enc, y / local_scale)
         elif self.name == "prophet":
             from prophet import Prophet
             for sku, g in self.panel.groupby("sku", sort=True):
@@ -63,7 +66,10 @@ class Forecaster:
     def predict(self):
         x, keys = prediction_rows(self.panel, self.cfg)
         if self.name == "xgboost":
-            keys["yhat"] = self.regressor.predict(self._encode(x)[self.columns])
+            raw_pred = self.regressor.predict(self._encode(x)[self.columns])
+            if getattr(self, "target_scaled", True):
+                raw_pred = raw_pred * x["local_scale"].to_numpy(dtype=float)
+            keys["yhat"] = raw_pred
         else:
             predictions = []
             for sku, g in self.panel.groupby("sku", sort=True):
@@ -94,6 +100,7 @@ class Forecaster:
         if self.name == "xgboost":
             self.regressor.save_model(directory / "xgboost.json")
             meta["columns"] = self.columns
+            meta["target_scaled"] = bool(getattr(self, "target_scaled", True))
         elif self.name == "prophet":
             from prophet.serialize import model_to_json
             for i, sku in enumerate(self.skus):
@@ -112,6 +119,7 @@ class Forecaster:
             obj.regressor = XGBRegressor()
             obj.regressor.load_model(directory / "xgboost.json")
             obj.columns = meta["columns"]
+            obj.target_scaled = bool(meta.get("target_scaled", False))
         elif obj.name == "prophet":
             from prophet.serialize import model_from_json
             for i, sku in enumerate(obj.skus):

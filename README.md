@@ -40,7 +40,7 @@ Quando falta produto no estoque (`stockout = 1`), a **saída observada** é meno
 Quatro modelos competem em igualdade de condições:
 1. **`naive` (Persistência):** repete a última observação conhecida na origem.
 2. **`seasonal` (Sazonal Ingênuo):** repete o último ciclo completo observado (12 meses atrás no mensal; 7 dias atrás no diário).
-3. **`xgboost` (Regressão Global Direta):** treina uma floresta de *Gradient Boosting* global entre todos os SKUs (`max_depth=3`, `learning_rate=0.05`, `n_estimators=100`). Utiliza **estratégia direta** (o passo futuro $h$ entra como feature e nenhuma previsão de $h-1$ é realimentada para prever $h$), com lags ($1, 3, 6, 12$ meses ou $1, 7, 14, 28$ dias), médias e desvios móveis na origem e codificação trigonométrica ($\sin/\cos$) de mês e dia da semana.
+3. **`xgboost` (Regressão Global Direta Normalizada por Escala e Tendência):** treina uma floresta de *Gradient Boosting* global entre todos os SKUs (`max_depth=3`, `learning_rate=0.05`, `n_estimators=100`) sobre o alvo normalizado pelo nível local na origem (`y / local_scale`). Utiliza **estratégia direta** com lag sazonal alinhado ao horizonte (`seasonal_target_lag`, capturando exatamente o mesmo mês do ano anterior ou mesmo dia da semana para cada passo futuro $h$), inclinação de tendência linear local (`slope_norm`), âncora sazonal-tendência (`seasonal_trend_anchor_norm`), lags ($1, 3, 6, 12$ meses ou $1, 7, 14, 28$ dias), médias/desvios móveis normalizados e codificação trigonométrica ($\sin/\cos$) de calendário.
 4. **`prophet` (Modelo Aditivo por SKU):** ajusta um modelo por SKU. Na frequência mensal, desativa a série de Fourier contínua anual e utiliza regressores binários explícitos para os meses 2 a 12 (seguindo a recomendação técnica do Prophet para séries mensais); na frequência diária, utiliza sazonalidade semanal e anual automática.
 
 **Protocolo de Avaliação sem Vazamento Temporal (`make_splits`):**
@@ -189,8 +189,8 @@ Os resultados abaixo já estão gerados e versionados nas pastas `data/erp_adapt
 
 | Resolução | Ranking de Seleção (MAE médio por SKU) | Vencedor | Erro Acumulado no Teste Final (WAPE %) |
 |---|---|---|---|
-| **Mensal (12 meses)** | **1º `prophet` (35,17)** <br> 2º `seasonal` (42,33) <br> 3º `xgboost` (70,90) <br> 4º `naive` (391,24) | **`prophet`** | • Horizonte 3 meses: **2,24%** <br> • Horizonte 6 meses: **1,49%** <br> • Horizonte 12 meses: **1,18%** |
-| **Diária (30 dias)** | **1º `prophet` (4,36)** <br> 2º `xgboost` (4,43) <br> 3º `seasonal` (6,11) <br> 4º `naive` (8,48) | **`prophet`** | • Primeiros 7 dias ($h \le 7$): **5,69%** <br> • Horizonte 30 dias ($h \le 30$): **4,80%** |
+| **Mensal (12 meses)** | **1º `xgboost` (34,83)** <br> 2º `prophet` (35,17) <br> 3º `seasonal` (42,33) <br> 4º `naive` (391,24) | **`xgboost`** | • Horizonte 3 meses: **1,32%** <br> • Horizonte 6 meses: **1,26%** <br> • Horizonte 12 meses: **0,99%** |
+| **Diária (30 dias)** | **1º `xgboost` (4,35)** <br> 2º `prophet` (4,36) <br> 3º `seasonal` (6,11) <br> 4º `naive` (8,48) | **`xgboost`** | • Primeiros 7 dias ($h \le 7$): **5,99%** <br> • Horizonte 30 dias ($h \le 30$): **4,44%** |
 
 ---
 

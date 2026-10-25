@@ -171,3 +171,37 @@ def test_physical_constraints_detect_incompatibility_and_height_violation():
     assert occ["excess_pallet_positions_after_receipts"].iloc[0] == 1.0
     assert occ["excess_weight_after_receipts_kg"].iloc[0] == 500.0
     assert occ["dominant_constraint_after_receipts"].iloc[0] == "PHYSICAL_COMPATIBILITY_OR_HEIGHT"
+
+
+def test_xgboost_seasonal_target_lag_and_trend_scaling():
+    from estoque_ia.features import prediction_rows
+    from estoque_ia.models import Forecaster
+
+    cfg = Config(frequency="monthly", xgb_estimators=80)
+    dates = pd.date_range("2018-01-01", periods=60, freq="MS")
+    rows = []
+    # Dois SKUs em escalas bem diferentes (100 vs 1000) com sazonalidade e tendência linear
+    for sku, scale_mult in [("SKU_LOW", 1.0), ("SKU_HIGH", 10.0)]:
+        for j, d in enumerate(dates):
+            seasonal = 20.0 * np.sin(2.0 * np.pi * d.month / 12.0)
+            y_val = scale_mult * (100.0 + 1.5 * j + seasonal)
+            rows.append({"sku": sku, "ds": d, "y": float(y_val)})
+    panel = pd.DataFrame(rows)
+
+    feat_df, _ = prediction_rows(panel, cfg)
+    # Para h=5, seasonal_target_lag deve ser exatamente o valor de 8 passos atrás (12 - 4 = 8)
+    low_vals = panel[panel.sku == "SKU_LOW"].sort_values("ds").y.to_numpy()
+    h5_row = feat_df[(feat_df.sku == "SKU_LOW") & (feat_df.h == 5)].iloc[0]
+    assert h5_row["seasonal_target_lag"] == pytest.approx(low_vals[-8])
+
+    # Treina até o mês 48 e avalia nos 12 meses finais (49..60): XGBoost deve superar o seasonal ingênuo
+    train_panel = panel[panel.ds <= dates[47]].copy()
+    test_actual = panel[panel.ds > dates[47]].sort_values(["sku", "ds"]).y.to_numpy()
+
+    xgb_pred = Forecaster("xgboost", cfg).fit(train_panel).predict().sort_values(["sku", "ds"]).yhat.to_numpy()
+    seas_pred = Forecaster("seasonal", cfg).fit(train_panel).predict().sort_values(["sku", "ds"]).yhat.to_numpy()
+
+    xgb_mae = np.abs(test_actual - xgb_pred).mean()
+    seas_mae = np.abs(test_actual - seas_pred).mean()
+    assert xgb_mae < seas_mae
+

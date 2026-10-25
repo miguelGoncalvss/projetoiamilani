@@ -1,4 +1,4 @@
 {
-  "model": "prophet",
+  "model": "xgboost",
   "selected_using": "selection_only"
 }

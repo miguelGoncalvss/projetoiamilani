@@ -19,6 +19,7 @@ def simulate(
     calibration_predictions_path=None,
     n_sims=300,
     seed=42,
+    model_name=None,
 ):
     out = Path(output)
     if out.exists():
@@ -27,10 +28,14 @@ def simulate(
     required = {"sku", "ds", "origin", "h", "yhat", "frequency", "model"}
     if not required <= set(forecast) or forecast.empty or forecast[list(required)].isna().any().any():
         raise ValueError("Forecast inválido")
+    if model_name is not None:
+        forecast = forecast[forecast["model"].astype(str) == str(model_name)].copy()
+        if forecast.empty:
+            raise ValueError(f"Modelo '{model_name}' não encontrado no arquivo de forecast")
+    if forecast.model.nunique() != 1:
+        raise ValueError("Use apenas um modelo no cenário (ou informe --model ao usar forecast_all_models.csv)")
     if forecast.duplicated(["sku", "ds"]).any() or forecast.frequency.nunique() != 1 or forecast.origin.nunique() != 1:
         raise ValueError("Use uma execução e uma frequência por simulação")
-    if forecast.model.nunique() != 1:
-        raise ValueError("Use apenas um modelo no cenário")
     if not np.isfinite(forecast.yhat).all() or (forecast.yhat < 0).any():
         raise ValueError("Previsões devem ser finitas e não negativas")
     frequency = forecast.frequency.iloc[0]
@@ -38,8 +43,10 @@ def simulate(
         raise ValueError("Frequência inválida")
     origin = forecast.origin.iloc[0]
     snapshot = origin + pd.offsets.MonthEnd(0) if frequency == "monthly" else origin
+    min_periods = 12 if frequency == "monthly" else 30
+    n_periods = max(min_periods, int(forecast.h.max()))
     expected = pd.date_range(origin + (pd.offsets.MonthBegin(1) if frequency == "monthly" else pd.Timedelta(days=1)),
-                             periods=12 if frequency == "monthly" else 30, freq="MS" if frequency == "monthly" else "D")
+                             periods=n_periods, freq="MS" if frequency == "monthly" else "D")
     for sku, g in forecast.groupby("sku"):
         if not pd.DatetimeIndex(g.ds.sort_values()).equals(expected):
             raise ValueError(f"Horizonte incompleto para {sku}")
@@ -105,6 +112,11 @@ def simulate(
     cal_path = Path(calibration_predictions_path) if calibration_predictions_path else (Path(forecast_path).parent / "calibration_predictions.csv")
     if cal_path and cal_path.exists():
         cal_df = pd.read_csv(cal_path, dtype={"sku": str})
+        if "model" in cal_df.columns:
+            selected_model = str(forecast.model.iloc[0])
+            filtered_cal = cal_df[cal_df["model"].astype(str) == selected_model].copy()
+            if not filtered_cal.empty:
+                cal_df = filtered_cal
 
     sku_risk_df, region_risk_df = simulate_joint_risk(
         forecast, stock, receipts, regions, calibration_predictions_df=cal_df, n_sims=n_sims, seed=seed

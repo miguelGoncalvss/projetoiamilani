@@ -1,0 +1,41 @@
+{
+  "project_version": "0.1.0",
+  "created_utc": "2026-10-28T03:36:15.125458+00:00",
+  "input_sha256": "345428a8ee2d4859da1e638a54d1d88231f2e63736de3cc00de390d4cf1d35e8",
+  "input_rows": 43830,
+  "sku_count": 15,
+  "start_date": "2018-01-01",
+  "end_date": "2025-12-31",
+  "target": "reconstructed_demand",
+  "reconstruct_stockouts": true,
+  "censoring_summary": {
+    "stockout_rows": 300,
+    "reconstructed_rows": 300,
+    "recovered_units": 5055.32,
+    "observed_total_outbound": 1327145.0,
+    "reconstructed_total_demand": 1332200.32
+  },
+  "protocol_adaptation": {
+    "protocol_adapted": false,
+    "available_periods": 96,
+    "selection_folds": 2,
+    "calibration_folds": 2,
+    "forecast_horizon": 36
+  },
+  "synthetic": true,
+  "stockout_rows": 300,
+  "versions": {
+    "numpy": "2.3.1",
+    "pandas": "2.3.2",
+    "scikit-learn": "1.8.0",
+    "xgboost": "3.3.0",
+    "prophet": "1.5.0"
+  },
+  "selection_rule": "mean MAE, equal weights per SKU; selection folds only",
+  "interval_method": "absolute scaled errors, by horizon, separate calibration folds",
+  "limitations": [
+    "Reconstrução de censura usa histórico local sem variáveis exógenas.",
+    "Bandas empíricas marginais não garantem cobertura; use joint_region_risk.csv na simulação para risco conjunto.",
+    "Nenhuma prova de acurácia operacional real em dados sintéticos."
+  ]
+}

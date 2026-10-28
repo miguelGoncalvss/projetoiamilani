@@ -1,0 +1,11 @@
+{
+  "model": "xgboost",
+  "all_models_trained": [
+    "naive",
+    "seasonal",
+    "xgboost",
+    "prophet"
+  ],
+  "selected_using": "selection_only",
+  "forecast_horizon": 36
+}

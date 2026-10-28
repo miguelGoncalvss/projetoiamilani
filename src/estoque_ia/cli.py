@@ -1,3 +1,4 @@
+from dataclasses import replace
 import argparse
 import logging
 from pathlib import Path
@@ -28,7 +29,7 @@ def main():
     erp_adapt.add_argument("--raw-dir", required=True)
     erp_adapt.add_argument("--out", required=True)
 
-    training = subs.add_parser("run", help="Seleção, calibração, teste e previsão futura")
+    training = subs.add_parser("run", help="Seleção, calibração, teste e previsão futura de todos os modelos")
     training.add_argument("--history", required=True)
     training.add_argument("--config", required=True)
     training.add_argument("--out", required=True)
@@ -37,6 +38,10 @@ def main():
                           help="Reconstruir demanda censurada nos dias de stockout=1 antes de treinar")
     training.add_argument("--adapt-protocol", action="store_true",
                           help="Ajustar folds de seleção/calibração se o histórico for menor que 84 meses")
+    training.add_argument("--horizon", type=int, default=None,
+                          help="Horizonte futuro em períodos (ex: 12, 24, 36 meses no mensal ou 30, 60, 90 dias no diário)")
+    training.add_argument("--years", type=int, default=None,
+                          help="Horizonte futuro em anos (ex: 1=12 meses, 2=24 meses, 3=36 meses)")
 
     sim = subs.add_parser("simulate", help="Projetar saldo, restrições físicas e risco conjunto")
     sim.add_argument("--forecast", required=True)
@@ -48,6 +53,7 @@ def main():
     sim.add_argument("--policy", choices=["fixed_receipts", "sQ"], default="fixed_receipts")
     sim.add_argument("--n-sims", type=int, default=300)
     sim.add_argument("--seed", type=int, default=42)
+    sim.add_argument("--model", default=None, help="Nome do modelo a filtrar caso use forecast_all_models.csv")
 
     replay = subs.add_parser("predict-saved", help="Reproduzir previsões pontuais do artefato salvo")
     replay.add_argument("--model-dir", required=True)
@@ -65,12 +71,22 @@ def main():
             _, report = adapt_erp_to_contract(args.raw_dir, args.out)
             print(f"Base ERP adaptada: {args.out} | SKUs: {report['sku_count']} | Rupturas: {report['stockout_days_flagged']}")
         elif args.command == "run":
-            run(args.history, Config.read(args.config), args.out, args.synthetic,
+            cfg = Config.read(args.config)
+            if args.horizon is not None and args.years is not None:
+                raise ValueError("Informe apenas --horizon ou --years, não ambos")
+            if args.horizon is not None:
+                cfg = replace(cfg, forecast_horizon=int(args.horizon))
+            elif args.years is not None:
+                if args.years < 1:
+                    raise ValueError("--years deve ser inteiro positivo")
+                mult = 12 if cfg.frequency == "monthly" else 365
+                cfg = replace(cfg, forecast_horizon=int(args.years) * mult)
+            run(args.history, cfg, args.out, args.synthetic,
                 reconstruct_stockouts=args.reconstruct_stockouts,
                 allow_protocol_adaptation=args.adapt_protocol)
         elif args.command == "simulate":
             simulate(args.forecast, args.stock, args.receipts, args.regions, args.out, args.scenario,
-                     policy=args.policy, n_sims=args.n_sims, seed=args.seed)
+                     policy=args.policy, n_sims=args.n_sims, seed=args.seed, model_name=args.model)
             print(f"Simulação salva: {args.out}")
         else:
             output = Path(args.out)

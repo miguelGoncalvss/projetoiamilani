@@ -95,7 +95,7 @@ def generate_erp_raw(directory, skus=15, seed=42, start_date="2018-01-01", end_d
 
     # Choques macro/familiares suaves para criar correlação realista entre SKUs da mesma região
     family_shocks = {
-        fam["region"]: rng.normal(0.0, 0.035, size=n_days)
+        fam["region"]: rng.normal(0.0, 0.004, size=n_days)
         for fam in ERP_FAMILIES
     }
 
@@ -123,10 +123,11 @@ def generate_erp_raw(directory, skus=15, seed=42, start_date="2018-01-01", end_d
             week_factor = weekly_multipliers[day_of_week]
             trend_factor = 1.0 + trend_slope * time_idx
             shared_shock = family_shocks[fam["region"]]
+            sku_noise = rng.normal(0.0, 0.007, size=n_days)
 
-            # Taxa determinística com tendência + sazonalidade + amostragem Poisson (alta margem para Prophet/XGBoost sobre baselines)
-            expected_rate = base * season_wave * month_factor * week_factor * trend_factor * (1.0 + shared_shock)
-            true_demand = rng.poisson(np.maximum(expected_rate, 0.5)).astype(int)
+            # Taxa determinística de CD B2B com tendência + sazonalidade + ruído operacional controlado
+            expected_rate = base * season_wave * month_factor * week_factor * trend_factor * (1.0 + shared_shock + sku_noise)
+            true_demand = np.maximum(1, np.rint(expected_rate)).astype(int)
 
             # Janelas de ruptura histórica (concentradas antes de 2023 para testar reconstrução no treino)
             stockout_flags = np.zeros(n_days, dtype=int)
@@ -405,7 +406,7 @@ def reconstruct_censored_demand(history):
                 if past_idx:
                     estimates.append(float(np.median(clean_vals[past_idx])))
                     estimates.append(float(np.mean(clean_vals[past_idx])))
-                if recent_idx:
+                elif recent_idx:
                     estimates.append(float(np.mean(clean_vals[recent_idx])))
 
                 est = float(np.mean(estimates)) if estimates else vals[i]
@@ -435,8 +436,9 @@ def adapt_config_to_history(panel, cfg: Config, allow_adaptation=False):
     preservando obrigatoriamente o horizonte completo de teste final.
     """
     dates = pd.DatetimeIndex(sorted(panel.ds.unique()))
-    minimum_train = cfg.lookback + cfg.horizon
-    required_standard = minimum_train + (cfg.selection_folds + cfg.calibration_folds + 1) * cfg.horizon
+    eval_horizon = cfg.base_horizon if (cfg.forecast_horizon is not None and cfg.forecast_horizon > cfg.base_horizon) else cfg.horizon
+    minimum_train = cfg.lookback + eval_horizon
+    required_standard = minimum_train + (cfg.selection_folds + cfg.calibration_folds + 1) * eval_horizon
 
     if len(dates) >= required_standard or not allow_adaptation:
         return cfg, {
@@ -444,13 +446,14 @@ def adapt_config_to_history(panel, cfg: Config, allow_adaptation=False):
             "available_periods": int(len(dates)),
             "selection_folds": cfg.selection_folds,
             "calibration_folds": cfg.calibration_folds,
+            "forecast_horizon": cfg.horizon,
         }
 
-    max_blocks = (len(dates) - minimum_train) // cfg.horizon
+    max_blocks = (len(dates) - minimum_train) // eval_horizon
     if max_blocks < 3:
         raise ValueError(
             f"Histórico insuficiente mesmo para protocolo adaptado: {len(dates)} períodos; "
-            f"mínimo absoluto para 1 seleção + 1 calibração + 1 teste é {minimum_train + 3 * cfg.horizon}."
+            f"mínimo absoluto para 1 seleção + 1 calibração + 1 teste é {minimum_train + 3 * eval_horizon}."
         )
 
     # Reserva sempre 1 bloco para teste; divide os demais entre seleção e calibração

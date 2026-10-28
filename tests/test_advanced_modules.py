@@ -205,3 +205,54 @@ def test_xgboost_seasonal_target_lag_and_trend_scaling():
     seas_mae = np.abs(test_actual - seas_pred).mean()
     assert xgb_mae < seas_mae
 
+
+def test_all_four_models_full_history_and_multiyear_forecast(tmp_path):
+    from estoque_ia.pipeline import run
+    from estoque_ia.synthetic import generate
+
+    data_dir = tmp_path / "demo_data"
+    generate(data_dir, skus=10, seed=42)
+
+    cfg = Config(
+        frequency="monthly",
+        models=["naive", "seasonal", "xgboost", "prophet"],
+        selection_folds=2,
+        calibration_folds=2,
+        minimum_calibration_samples=20,
+        xgb_estimators=15,
+        forecast_horizon=36,
+    )
+    out_dir = tmp_path / "run_3years"
+    run(data_dir / "history.csv", cfg, out_dir, synthetic=True)
+
+    # Verifica que todos os 4 modelos foram treinados na base completa (2018-2025) e geraram previsões de 36 meses (2026-2028)
+    all_fc = pd.read_csv(out_dir / "forecast_all_models.csv", parse_dates=["ds", "origin"])
+    assert set(all_fc["model"].unique()) == {"naive", "seasonal", "xgboost", "prophet"}
+    assert set(all_fc["ds"].dt.year.unique()) == {2026, 2027, 2028}
+    assert all_fc["h"].max() == 36
+    assert all_fc[["yhat", "lower_80", "upper_80", "lower_95", "upper_95"]].notna().all().all()
+
+    for m in ["naive", "seasonal", "xgboost", "prophet"]:
+        assert (out_dir / f"forecast_{m}.csv").exists()
+        assert (out_dir / "models" / m / "metadata.json").exists()
+
+    summary_cd = pd.read_csv(out_dir / "forecast_by_year_total_cd.csv")
+    assert len(summary_cd) == 4 * 3  # 4 modelos x 3 anos (2026, 2027, 2028)
+
+    # Testa simulação multi-anual (36 meses = 2026 a 2028) escolhendo um modelo específico de forecast_all_models.csv
+    inv, occ = simulate(
+        out_dir / "forecast_all_models.csv",
+        data_dir / "stock.csv",
+        "auto",
+        data_dir / "regions.csv",
+        tmp_path / "sim_3years_prophet",
+        "cenario_3anos_prophet",
+        policy="sQ",
+        n_sims=20,
+        seed=42,
+        model_name="prophet",
+    )
+    assert len(inv) == 10 * 36
+    assert set(pd.to_datetime(inv["date"]).dt.year.unique()) == {2026, 2027, 2028}
+
+

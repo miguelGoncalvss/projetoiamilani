@@ -1,0 +1,12 @@
+{
+  "status": "completed",
+  "selected_model": "xgboost",
+  "trained_models": [
+    "naive",
+    "seasonal",
+    "xgboost",
+    "prophet"
+  ],
+  "forecast_horizon": 36,
+  "note": "Todos os modelos foram ajustados com 100% do histórico em models/<nome> e forecast_<nome>.csv; forecast.csv e model/ contêm o vencedor."
+}

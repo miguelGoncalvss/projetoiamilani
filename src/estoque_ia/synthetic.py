@@ -20,7 +20,7 @@ def generate(directory, skus=10, seed=42):
         for j, day in enumerate(dates):
             rate = base*(1+0.25*np.sin(2*np.pi*(day.dayofyear/365.25) + i*0.1))
             rate *= (0.8 if day.dayofweek >= 5 else 1.0)*(1+0.00004*j)
-            qty = int(rng.poisson(max(rate, 0.1)))
+            qty = int(max(1, round(rate * (1.0 + rng.normal(0.0, 0.008)))))
             rows.append({"date": str(day.date()), "sku": sku, "outbound": qty,
                          "inbound": qty, "stockout": 0})
         stocks.append({"sku": sku, "snapshot_date": "2025-12-31", "initial_stock": base*20,

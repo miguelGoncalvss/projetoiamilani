@@ -1,5 +1,5 @@
 {
-  "raw_movement_rows": 55707,
+  "raw_movement_rows": 55711,
   "cleaned_sku_whitespace_rows": 930,
   "separated_client_returns_rows": 834,
   "separated_client_returns_units": 2170.0,
